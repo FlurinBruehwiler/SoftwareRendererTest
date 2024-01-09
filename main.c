@@ -1,134 +1,104 @@
-#include <windows.h>
+#include <stdio.h> /* printf and fprintf */
 #include <stdbool.h>
 
-const char g_szClassName[] = "myWindowClass";
-HDC hdc;
+#ifdef _WIN32
+#include <SDL/SDL.h> /* Windows-specific SDL2 library */
+#else
+#include <SDL.h> /* macOS- and GNU/Linux-specific */
+#endif
 
-typedef struct Vector2 {
-    int x;
-    int y;
-} Vector2;
+/* Sets constants */
+#define WIDTH 800
+#define HEIGHT 600
 
-bool edgeFunction(Vector2 startLine, Vector2 endLIne, Vector2 point)
+int main (int argc, char **argv)
 {
-    return ((point.x - startLine.x) * (endLIne.y - startLine.y) - (point.y - startLine.y) * (endLIne.x - startLine.x) >= 0);
-}
+  /* Initialises data */
+  SDL_Window *window = NULL;
+  
+  /*
+  * Initialises the SDL video subsystem (as well as the events subsystem).
+  * Returns 0 on success or a negative error code on failure using SDL_GetError().
+  */
+  if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    fprintf(stderr, "SDL failed to initialise: %s\n", SDL_GetError());
+    return 1;
+  }
 
-bool pointIsInsideTriangle(Vector2 v0, Vector2 v1, Vector2 v2, Vector2 point)
-{
-    bool inside = true;
-    inside &= edgeFunction(v0, v1, point);
-    inside &= edgeFunction(v1, v2, point);
-    inside &= edgeFunction(v2, v0, point);
+  /* Creates a SDL window */
+  window = SDL_CreateWindow("SDL Example", /* Title of the SDL window */
+			    SDL_WINDOWPOS_UNDEFINED, /* Position x of the window */
+			    SDL_WINDOWPOS_UNDEFINED, /* Position y of the window */
+			    WIDTH, /* Width of the window in pixels */
+			    HEIGHT, /* Height of the window in pixels */
+			    0); /* Additional flag(s) */
 
-    return inside;
-}
+  /* Checks if window has been created; if not, exits program */
+  if (window == NULL) {
+    fprintf(stderr, "SDL window failed to initialise: %s\n", SDL_GetError());
+    return 1;
+  }
 
-void DrawLine(int startX, int startY, int endX, int endY, COLORREF color){
-    int m_new = 2 * (endY - startY);
-    int slope_error_new = m_new - (endX - startX);
-    for (int x = startX, y = startY; x <= endX; x++) {
-        SetPixel(hdc, x, y, color);
+      // Create a renderer
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (renderer == NULL) {
+        fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+        return -1;
+    }
 
-        // Add slope to increment angle formed
-        slope_error_new += m_new;
+    // Create a texture
+    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+    if (texture == NULL) {
+        fprintf(stderr, "Texture could not be created! SDL_Error: %s\n", SDL_GetError());
+        return -1;
+    }
 
-        // Slope error reached limit, time to
-        // increment y and update slope error.
-        if (slope_error_new >= 0) {
-            y++;
-            slope_error_new -= 2 * (endX - startX);
+    void* pixels;
+    int pitch;
+    SDL_LockTexture(texture, NULL, &pixels, &pitch);
+
+    // Modify the pixel data (replace this with your own pixel manipulation)
+    for (int y = 0; y < WIDTH; ++y) {
+        for (int x = 0; x < HEIGHT; ++x) {
+            // Calculate the index of the current pixel
+            int index = (y * pitch / 4) + x;
+            // Set pixel color (RGBA)
+            ((Uint32*)pixels)[index] = 0xFF0000FF; // Red
         }
     }
-}
+    // Unlock the texture
+    SDL_UnlockTexture(texture);
 
-void DrawTriangle(Vector2 v0, Vector2 v1, Vector2 v2, COLORREF color){
-    for (int x = 0; x < 500; ++x) {
-        for (int y = 0; y < 500; ++y) {
-            if(pointIsInsideTriangle(v0, v1, v2, (Vector2){ x, y })){
-                SetPixel(hdc, x, y, color);
+    // Clear the renderer
+    SDL_RenderClear(renderer);
+
+    // Copy the texture to the renderer
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+    // Present the renderer
+    SDL_RenderPresent(renderer);
+
+	bool exit = false;
+    SDL_Event eventData;
+    while (!exit)
+    {
+        while (SDL_PollEvent(&eventData))
+        {
+            switch (eventData.type)
+            {
+            case SDL_QUIT:
+                exit = true;
+                break;
             }
         }
     }
-}
 
-// Step 4: the Window Procedure
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static COLORREF pixelColor = RGB(255, 0, 0); // Set initial color (red)
 
-    switch (msg) {
-        case WM_PAINT:
-            PAINTSTRUCT ps;
-            hdc = BeginPaint(hwnd, &ps);
-
-            DrawTriangle((Vector2){400, 100}, (Vector2){100, 100}, (Vector2){400, 400}, pixelColor);
-
-            EndPaint(hwnd, &ps);
-            break;
-        case WM_CLOSE:
-            DestroyWindow(hwnd);
-            break;
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            break;
-        default:
-            return
-            DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-    return 0;
-}
-
-int WINAPI
-WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow){
-    WNDCLASSEX wc;
-    HWND hwnd;
-    MSG Msg;
-
-    //Step 1: Registering the Window Class
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = 0;
-    wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = 0;
-    wc.cbWndExtra = 0;
-    wc.hInstance = hInstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    wc.lpszMenuName = NULL;
-    wc.lpszClassName = g_szClassName;
-    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-
-    if (!RegisterClassEx( & wc)) {
-        MessageBox(NULL,
-            "Window Registration Failed!", "Error!",
-            MB_ICONEXCLAMATION | MB_OK);
-        return 0;
-    }
-
-    // Step 2: Creating the Window
-    hwnd = CreateWindowEx(
-        WS_EX_CLIENTEDGE,
-        g_szClassName,
-        "SoftwareRendering",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 1000, 600,
-        NULL, NULL, hInstance, NULL);
-
-    if (hwnd == NULL) {
-        MessageBox(NULL,
-            "Window Creation Failed!", "Error!",
-            MB_ICONEXCLAMATION | MB_OK);
-        return 0;
-    }
-
-    ShowWindow(hwnd, nCmdShow);
-    UpdateWindow(hwnd);
-
-    // Step 3: The Message Loop
-    while (GetMessage( & Msg, NULL, 0, 0) > 0) {
-        TranslateMessage( & Msg);
-        DispatchMessage( & Msg);
-    }
-    return Msg.
-    wParam;
+  /* Frees memory */
+  SDL_DestroyWindow(window);
+  
+  /* Shuts down all SDL subsystems */
+  SDL_Quit(); 
+  
+  return 0;
 }
