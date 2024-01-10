@@ -1,11 +1,7 @@
 #include <stdio.h> /* printf and fprintf */
 #include <stdbool.h>
 
-#ifdef _WIN32
-#include <SDL/SDL.h> /* Windows-specific SDL2 library */
-#else
-#include <SDL.h> /* macOS- and GNU/Linux-specific */
-#endif
+#include <SDL.h> /* Windows-specific SDL2 library */
 
 /* Sets constants */
 #define WIDTH 800
@@ -57,15 +53,15 @@ int main (int argc, char **argv)
     int pitch;
     SDL_LockTexture(texture, NULL, &pixels, &pitch);
 
-    // Modify the pixel data (replace this with your own pixel manipulation)
-    for (int y = 0; y < WIDTH; ++y) {
-        for (int x = 0; x < HEIGHT; ++x) {
-            // Calculate the index of the current pixel
-            int index = (y * pitch / 4) + x;
-            // Set pixel color (RGBA)
-            ((Uint32*)pixels)[index] = 0xFF0000FF; // Red
-        }
-    }
+//    // Modify the pixel data (replace this with your own pixel manipulation)
+//    for (int y = 0; y < WIDTH; ++y) {
+//        for (int x = 0; x < HEIGHT; ++x) {
+//            // Calculate the index of the current pixel
+//            int index = (y * pitch / 4) + x;
+//            // Set pixel color (RGBA)
+//            ((Uint32*)pixels)[index] = 0xFF0000FF; // Red
+//        }
+//    }
     // Unlock the texture
     SDL_UnlockTexture(texture);
 
@@ -86,9 +82,9 @@ int main (int argc, char **argv)
         {
             switch (eventData.type)
             {
-            case SDL_QUIT:
-                exit = true;
-                break;
+                case SDL_QUIT:
+                    exit = true;
+                    break;
             }
         }
     }
