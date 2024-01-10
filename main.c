@@ -1,87 +1,62 @@
-#include <stdio.h> /* printf and fprintf */
+#include <stdio.h>
 #include <stdbool.h>
+#include <SDL.h>
+#include "renderer.h"
+#include "structs.h"
 
-#include <SDL.h> /* Windows-specific SDL2 library */
+int main(int argc, char **argv) {
+    SDL_Window *window = NULL;
 
-/* Sets constants */
-#define WIDTH 800
-#define HEIGHT 600
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fprintf(stderr, "SDL failed to initialise: %s\n", SDL_GetError());
+        return 1;
+    }
 
-int main (int argc, char **argv)
-{
-  /* Initialises data */
-  SDL_Window *window = NULL;
-  
-  /*
-  * Initialises the SDL video subsystem (as well as the events subsystem).
-  * Returns 0 on success or a negative error code on failure using SDL_GetError().
-  */
-  if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-    fprintf(stderr, "SDL failed to initialise: %s\n", SDL_GetError());
-    return 1;
-  }
+    window = SDL_CreateWindow("SDL Example",
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              WIDTH,
+                              HEIGHT,
+                              0);
 
-  /* Creates a SDL window */
-  window = SDL_CreateWindow("SDL Example", /* Title of the SDL window */
-			    SDL_WINDOWPOS_UNDEFINED, /* Position x of the window */
-			    SDL_WINDOWPOS_UNDEFINED, /* Position y of the window */
-			    WIDTH, /* Width of the window in pixels */
-			    HEIGHT, /* Height of the window in pixels */
-			    0); /* Additional flag(s) */
+    if (window == NULL) {
+        fprintf(stderr, "SDL window failed to initialise: %s\n", SDL_GetError());
+        return 1;
+    }
 
-  /* Checks if window has been created; if not, exits program */
-  if (window == NULL) {
-    fprintf(stderr, "SDL window failed to initialise: %s\n", SDL_GetError());
-    return 1;
-  }
-
-      // Create a renderer
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == NULL) {
         fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
         return -1;
     }
 
-    // Create a texture
-    SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+    SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH,
+                                             HEIGHT);
     if (texture == NULL) {
         fprintf(stderr, "Texture could not be created! SDL_Error: %s\n", SDL_GetError());
         return -1;
     }
 
-    void* pixels;
+    void *voidPixels;
     int pitch;
-    SDL_LockTexture(texture, NULL, &pixels, &pitch);
+    SDL_LockTexture(texture, NULL, &voidPixels, &pitch);
 
-//    // Modify the pixel data (replace this with your own pixel manipulation)
-//    for (int y = 0; y < WIDTH; ++y) {
-//        for (int x = 0; x < HEIGHT; ++x) {
-//            // Calculate the index of the current pixel
-//            int index = (y * pitch / 4) + x;
-//            // Set pixel color (RGBA)
-//            ((Uint32*)pixels)[index] = 0xFF0000FF; // Red
-//        }
-//    }
-    // Unlock the texture
+    pixels = (unsigned int *) voidPixels;
+    render();
+
     SDL_UnlockTexture(texture);
 
-    // Clear the renderer
     SDL_RenderClear(renderer);
 
-    // Copy the texture to the renderer
     SDL_RenderCopy(renderer, texture, NULL, NULL);
 
-    // Present the renderer
     SDL_RenderPresent(renderer);
 
-	bool exit = false;
+    bool exit = false;
     SDL_Event eventData;
-    while (!exit)
-    {
-        while (SDL_PollEvent(&eventData))
-        {
-            switch (eventData.type)
-            {
+    while (!exit) {
+        while (SDL_PollEvent(&eventData)) {
+            switch (eventData.type) {
                 case SDL_QUIT:
                     exit = true;
                     break;
@@ -89,12 +64,9 @@ int main (int argc, char **argv)
         }
     }
 
+    SDL_DestroyWindow(window);
 
-  /* Frees memory */
-  SDL_DestroyWindow(window);
-  
-  /* Shuts down all SDL subsystems */
-  SDL_Quit(); 
-  
-  return 0;
+    SDL_Quit();
+
+    return 0;
 }
